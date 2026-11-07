@@ -39,7 +39,7 @@ cdp-native
 已有打包文件时：
 
 ```sh
-npm install -g cdp-native@0.1.0 --registry=https://registry.axzo.cn
+npm install -g cdp-native@0.1.0
 cdp-native
 ```
 

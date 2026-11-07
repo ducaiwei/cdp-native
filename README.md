@@ -275,4 +275,4 @@ WebKit 前端包含来自 GPL-3.0 项目的兼容补丁，WebKit 源文件保留
 
 在 macOS ARM64 上，`npm run setup:webkit`（或 `cdp-native setup:webkit`）会优先复用已安装的 iOS 代理；缺失时通过 Homebrew 安装 `ios-webkit-debug-proxy` 及其依赖。请先安装 Homebrew。已有 WebKit 前端时会跳过前端下载，仍会检查代理。
 
-使用 `npm start -- --device-type ios` 启动时，会检测 iOS 代理是否可运行，兼容 Intel Mac x86-64 和 Apple Silicon（arm64）。检测 PATH 后优先检查当前架构对应的 Homebrew 目录，并兼容另一安装目录；缺少代理时，arm64 提示运行 `setup:webkit`，Intel Mac 提示运行 `brew install ios-webkit-debug-proxy`。
+使用 `npm start -- --device-type ios` 启动时，会检测 iOS 代理是否可运行，兼容 Intel Mac x86-64 和 Apple Silicon（arm64）。检测 PATH 后优先检查当前架构对应的 Homebrew 目录，并兼容另一安装目录；缺少代理时，arm64 自动复用 `setup:webkit` 的 Homebrew 代理安装流程（需要已安装 Homebrew）；使用 `--no-download` 时仅提示安装。Intel Mac 提示运行 `brew install ios-webkit-debug-proxy`。

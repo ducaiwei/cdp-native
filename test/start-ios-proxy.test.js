@@ -46,3 +46,31 @@ test('startup timeout and spawn error clean up the owned process', async () => {
     assert.equal(process.kills, 1);
   }
 });
+
+test('arm64 startup installs a missing proxy even when frontend is already prepared', async () => {
+  let probes = 0;
+  let installs = 0;
+  const process = child();
+  const proxy = await start({ platform: 'darwin', arch: 'arm64' }, {
+    prepare: async () => { throw Object.assign(new Error('missing'), { code: 'IOS_PROXY_NOT_INSTALLED' }); },
+    install: async options => { installs++; assert.equal(options.arch, 'arm64'); return '/installed/proxy'; },
+    fetchJson: async () => { if (++probes <= 2) return refused(); return []; },
+    launch: file => { assert.equal(file, '/installed/proxy'); return process; }, log() {},
+  });
+  proxy.close();
+  assert.equal(installs, 1);
+  assert.equal(process.kills, 1);
+});
+
+test('startup respects download opt-out, custom configuration and other architectures', async () => {
+  for (const overrides of [{ download: false }, { iosProxyPath: '/custom' }, { iosProxyManifest: '/manifest' }, { arch: 'x64' }]) {
+    await assert.rejects(start({ platform: 'darwin', arch: 'arm64', ...overrides }, {
+      prepare: async () => { throw Object.assign(new Error('missing'), { code: 'IOS_PROXY_NOT_INSTALLED' }); },
+      install: unexpected, launch: unexpected, fetchJson: async () => refused(),
+    }), /missing/);
+  }
+  await assert.rejects(start({ platform: 'darwin', arch: 'arm64' }, {
+    prepare: async () => { throw new Error('invalid manifest'); },
+    install: unexpected, launch: unexpected, fetchJson: async () => refused(),
+  }), /invalid manifest/);
+});

@@ -1,10 +1,11 @@
 const { spawn } = require('node:child_process');
 const { setTimeout: delay } = require('node:timers/promises');
 const prepareIosProxy = require('./prepareIosProxy');
+const setupIosProxy = require('../../scripts/setup-ios-proxy');
 
 const url = 'http://127.0.0.1:9221';
 module.exports = async function startIosProxy(options = {}, {
-  prepare = prepareIosProxy, launch = spawn, fetchJson = async () => {
+  prepare = prepareIosProxy, install = setupIosProxy, launch = spawn, fetchJson = async () => {
     const response = await fetch(`${url}/json`, { signal: AbortSignal.timeout(700), redirect: 'error' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
@@ -23,7 +24,18 @@ module.exports = async function startIosProxy(options = {}, {
     }
   }
   if (await available()) return { url, close() {} };
-  const executable = await prepare(options);
+  let executable;
+  try {
+    executable = await prepare(options);
+  } catch (error) {
+    const platform = options.platform || process.platform;
+    const arch = options.arch || process.arch;
+    if (error.code !== 'IOS_PROXY_NOT_INSTALLED' || platform !== 'darwin' || arch !== 'arm64'
+      || options.download === false || options.iosProxyPath || process.env.CHII_IOS_PROXY_PATH
+      || options.iosProxyManifest || process.env.CHII_IOS_PROXY_MANIFEST) throw error;
+    log('未检测到 iOS 代理，正在执行 setup:webkit 的代理安装流程…');
+    executable = await install({ platform, arch, log });
+  }
   // Recheck after downloading, since another instance may now own the port.
   if (await available()) return { url, close() {} };
   const child = launch(executable, ['--no-frontend', '--config=null:9221,:9222-9322'], {

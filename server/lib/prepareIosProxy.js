@@ -36,7 +36,7 @@ module.exports = async function prepareIosProxy({
     const install = arch === 'arm64'
       ? '请运行 npm run setup:webkit（或 cdp-native setup:webkit）安装代理及依赖'
       : '请运行 brew install ios-webkit-debug-proxy 安装代理及依赖';
-    throw new Error(`未检测到可运行的 ${platform}/${arch} iOS 代理。${install}，或用 --ios-proxy-path 指定已安装的代理。`);
+    throw Object.assign(new Error(`未检测到可运行的 ${platform}/${arch} iOS 代理。${install}，或用 --ios-proxy-path 指定已安装的代理。`), { code: 'IOS_PROXY_NOT_INSTALLED' });
   }
   if (!bundle) throw new Error(`没有 ${platform}/${arch} 的 iOS 代理下载包。请用 --ios-proxy-manifest 指定包含依赖的预编译包清单，或用 --ios-proxy-path 指定已安装的代理。`);
   if (!/^[a-f0-9]{64}$/i.test(bundle.sha256) || new URL(bundle.url).protocol !== 'https:') {

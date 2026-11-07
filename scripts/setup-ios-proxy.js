@@ -7,7 +7,7 @@ module.exports = async function setupIosProxy({
 } = {}) {
   if (platform !== 'darwin' || arch !== 'arm64') return;
   try {
-    return await prepare({ download: false });
+    return await prepare({ download: false, platform, arch });
   } catch (error) {
     if (process.env.CHII_IOS_PROXY_PATH || process.env.CHII_IOS_PROXY_MANIFEST) throw error;
   }
@@ -26,7 +26,7 @@ module.exports = async function setupIosProxy({
   } catch (error) {
     throw new Error('iOS 代理安装失败，请运行 brew install ios-webkit-debug-proxy 后重试 setup:webkit。', { cause: error });
   }
-  const proxy = await prepare({ download: false });
+  const proxy = await prepare({ download: false, platform, arch });
   log(`[WebKit] iOS 代理已准备：${proxy}`);
   return proxy;
 };

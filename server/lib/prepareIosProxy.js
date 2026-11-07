@@ -25,10 +25,19 @@ module.exports = async function prepareIosProxy({
     throw new Error(`无法运行指定的 iOS 代理: ${iosProxyPath}，请检查架构及动态库依赖。`);
   }
   const candidates = [executable];
-  if (platform === 'darwin') candidates.push('/opt/homebrew/bin/' + executable, '/usr/local/bin/' + executable);
+  if (platform === 'darwin') {
+    const prefixes = arch === 'arm64' ? ['/opt/homebrew', '/usr/local'] : ['/usr/local', '/opt/homebrew'];
+    candidates.push(...prefixes.map(prefix => path.join(prefix, 'bin', executable)));
+  }
   for (const candidate of candidates) if (await valid(candidate)) return candidate;
   if (iosProxyManifest) sources = { ...sources, ...JSON.parse(await fs.readFile(iosProxyManifest, 'utf8')) };
   const bundle = sources[`${platform}-${arch}`];
+  if (!bundle && platform === 'darwin' && ['x64', 'arm64'].includes(arch)) {
+    const install = arch === 'arm64'
+      ? '请运行 npm run setup:webkit（或 cdp-native setup:webkit）安装代理及依赖'
+      : '请运行 brew install ios-webkit-debug-proxy 安装代理及依赖';
+    throw new Error(`未检测到可运行的 ${platform}/${arch} iOS 代理。${install}，或用 --ios-proxy-path 指定已安装的代理。`);
+  }
   if (!bundle) throw new Error(`没有 ${platform}/${arch} 的 iOS 代理下载包。请用 --ios-proxy-manifest 指定包含依赖的预编译包清单，或用 --ios-proxy-path 指定已安装的代理。`);
   if (!/^[a-f0-9]{64}$/i.test(bundle.sha256) || new URL(bundle.url).protocol !== 'https:') {
     throw new Error('iOS 代理下载清单必须提供 HTTPS ZIP 地址和 SHA-256。');

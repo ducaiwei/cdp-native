@@ -63,7 +63,7 @@ cdp-native --device-type adb --adb-serial SERIAL --adb-package com.example.app
 cdp-native --adb-path /path/to/adb --no-download --no-open
 ```
 
-ADB 优先复用指定路径、SDK、PATH 或缓存中的工具。缺失时从 Google 下载 Platform-Tools；默认缓存为 `~/.cache/cdp-native/<系统>-<架构>`，可通过 `CHII_ADB_CACHE` 修改。自动下载覆盖 macOS x64/arm64、Windows x64、Linux x64；其他架构需自行提供工具。
+ADB 优先复用指定路径、SDK、PATH 或缓存中的工具。缺失时从 Google 下载 Platform-Tools；默认缓存为 `~/.cache/cdp-native/<系统>-<架构>`，可通过 `CHII_ADB_CACHE` 修改。自动下载覆盖 macOS x86-64/arm64、Windows x64、Linux x64；其他架构需自行提供工具。
 
 ### 2.3 鸿蒙 / HDC
 
@@ -79,7 +79,7 @@ cdp-native --device-type hdc --hdc-serial SERIAL --hdc-package com.example.app
 cdp-native --device-type hdc --hdc-path /path/to/hdc
 ```
 
-HDC 会从显式配置、SDK/DevEco 常见目录、PATH 和缓存中检测。内置自动下载覆盖 macOS x64/arm64、Windows x64，使用固定版本第三方工具包并校验 SHA-256；Linux 等平台需要自行安装 SDK 工具。缓存可通过 `CHII_HDC_CACHE` 配置。
+HDC 会从显式配置、SDK/DevEco 常见目录、PATH 和缓存中检测。内置自动下载覆盖 macOS x86-64/arm64、Windows x64，使用固定版本第三方工具包并校验 SHA-256；Linux 等平台需要自行安装 SDK 工具。缓存可通过 `CHII_HDC_CACHE` 配置。
 
 默认 `auto` 在 ADB/HDC 候选设备中选择唯一设备；候选不唯一时要求指定类型及序列号。选定后保持同一设备及传输方式，断开不会自动切到另一台手机。
 
@@ -274,3 +274,5 @@ WebKit Inspector 与 CDP 都采用命令、响应和事件式交互，但方法�
 WebKit 前端包含来自 GPL-3.0 项目的兼容补丁，WebKit 源文件保留各自许可；准备和分发时应保留生成目录中的许可及 PROVENANCE.txt。ADB、HDC 和 iOS 代理也各有自身分发与运行依赖，详细安装说明见仓库 README。
 
 在 macOS ARM64 上，`npm run setup:webkit`（或 `cdp-native setup:webkit`）会优先复用已安装的 iOS 代理；缺失时通过 Homebrew 安装 `ios-webkit-debug-proxy` 及其依赖。请先安装 Homebrew。已有 WebKit 前端时会跳过前端下载，仍会检查代理。
+
+使用 `npm start -- --device-type ios` 启动时，会检测 iOS 代理是否可运行，兼容 Intel Mac x86-64 和 Apple Silicon（arm64）。检测 PATH 后优先检查当前架构对应的 Homebrew 目录，并兼容另一安装目录；缺少代理时，arm64 提示运行 `setup:webkit`，Intel Mac 提示运行 `brew install ios-webkit-debug-proxy`。

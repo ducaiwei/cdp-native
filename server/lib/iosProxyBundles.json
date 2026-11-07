@@ -1,0 +1,6 @@
+{
+  "win32-x64": {
+    "url": "https://github.com/google/ios-webkit-debug-proxy/releases/download/v1.9.1/ios-webkit-debug-proxy-1.9.1-win64-bin.zip",
+    "sha256": "f1c7a62ae956ea9ad6fb3ae4cf13f3df882b0d52a7fcc34a0e4e728e0e364fed"
+  }
+}

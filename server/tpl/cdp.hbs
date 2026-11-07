@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Native CDP · Chii</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+    input, button { padding: 8px 12px; font: inherit; }
+    input { width: min(420px, 65%); }
+    li { padding: 16px 0; border-bottom: 1px solid #8885; }
+    li span { display: block; overflow-wrap: anywhere; opacity: .7; margin: 6px 0; }
+    a { color: #4285f4; }
+    #status { min-height: 24px; }
+  </style>
+</head>
+<body data-base-path="{{basePath}}">
+  <a href="{{basePath}}">← Chii</a>
+  <h1>Native CDP</h1>
+  <p>连接已开启远程调试的 WebView / ArkWeb / Chrome 页面，支持断点、单步执行和局部变量查看。无需注入 target.js。</p>
+  <form id="login" hidden>
+    <label for="token">CDP 访问令牌</label><br><br>
+    <input id="token" type="password" required autocomplete="current-password" placeholder="CHII_CDP_TOKEN">
+    <button type="submit">连接</button>
+  </form>
+  <p><button id="refresh" hidden>刷新页面列表</button></p>
+  <p id="status" role="status"></p>
+  <ul id="targets"></ul>
+  <script>
+    const basePath = document.body.dataset.basePath;
+    const root = basePath + 'cdp/';
+    const status = document.getElementById('status');
+    const login = document.getElementById('login');
+    const refresh = document.getElementById('refresh');
+    let retry;
+    let loading = false;
+    let authenticated = null;
+    async function loadTargets(background = false) {
+      if (loading) return;
+      loading = true;
+      clearTimeout(retry);
+      const list = document.getElementById('targets');
+      if (!background) status.textContent = '正在读取设备页面…';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        const response = await fetch(root + 'targets', { signal: controller.signal });
+        if (response.status === 401) {
+          authenticated = false;
+          login.hidden = false;
+          refresh.hidden = true;
+          status.textContent = '请输入服务器配置的 CDP 访问令牌。';
+          return;
+        }
+        authenticated = true;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '无法连接调试接口。');
+        login.hidden = true;
+        refresh.hidden = false;
+        status.textContent = data.targets.length ? data.targets.length + ' 个页面' : '暂无页面，请在手机应用或浏览器中打开网页。';
+        const items = [];
+        for (const target of data.targets) {
+          const item = document.createElement('li');
+          const title = document.createElement('strong');
+          title.textContent = target.title || '(无标题)';
+          const url = document.createElement('span');
+          url.textContent = target.url;
+          const link = document.createElement('a');
+          const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+          const socket = location.host + root + 'socket?id=' + encodeURIComponent(target.id);
+          link.href = basePath + (target.frontend === 'webkit' ? 'webkit/Main.html?' : 'front_end/inspector.html?') + protocol + '=' + encodeURIComponent(socket);
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = target.frontend === 'webkit' ? 'Inspect · WebKit' : 'Inspect';
+          const process = document.createElement('span');
+          process.textContent = target.process ? (target.frontend === 'webkit' ? 'iOS 设备：' : 'WebView 进程：') + target.process : '';
+          item.append(title, process, url, link);
+          items.push(item);
+        }
+        list.replaceChildren(...items);
+      } catch (error) {
+        status.textContent = controller.signal.aborted
+          ? '读取设备页面超时，请检查 USB 连接和调试授权；将自动重试。'
+          : error.message;
+        refresh.hidden = false;
+      } finally {
+        clearTimeout(timeout);
+        loading = false;
+        if (authenticated !== false) retry = setTimeout(() => loadTargets(true), 3000);
+      }
+    }
+    async function connect(token) {
+      login.hidden = true;
+      status.textContent = '正在连接…';
+      try {
+        const input = document.getElementById('token');
+        const response = await fetch(root + 'login', {
+          method: 'POST',
+          body: new URLSearchParams({ token })
+        });
+        if (!response.ok) throw new Error('连接失败，请检查访问令牌。');
+        input.value = '';
+        await loadTargets();
+      } catch (error) {
+        login.hidden = false;
+        status.textContent = error.message;
+      }
+    }
+    login.addEventListener('submit', event => {
+      event.preventDefault();
+      connect(document.getElementById('token').value);
+    });
+    refresh.addEventListener('click', () => loadTargets());
+    const startupToken = new URLSearchParams(location.hash.slice(1)).get('token');
+    if (startupToken) {
+      history.replaceState(null, '', location.pathname + location.search);
+      connect(startupToken);
+    } else {
+      loadTargets();
+    }
+  </script>
+</body>
+</html>

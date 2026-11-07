@@ -1,0 +1,38 @@
+{
+  "name": "cdp-native",
+  "version": "0.1.0",
+  "description": "Android WebView and HarmonyOS ArkWeb CDP debugger with automatic ADB/HDC setup",
+  "license": "MIT",
+  "main": "server/index.js",
+  "bin": {
+    "cdp-native": "bin/cdp-native.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "server",
+    "public/front_end",
+    "LICENSE",
+    "README.md",
+    "scripts"
+  ],
+  "scripts": {
+    "start": "node bin/cdp-native.js",
+    "test": "node --test test/*.test.js",
+    "test:cdp": "npm test",
+    "build": "node scripts/build.js",
+    "prepack": "npm run build",
+    "pack:native": "node scripts/pack-native.js",
+    "setup:webkit": "node scripts/setup-webkit.js"
+  },
+  "dependencies": {
+    "commander": "^5.0.0",
+    "handlebars": "^4.7.6",
+    "koa": "^2.15.3",
+    "koa-router": "^13.0.1",
+    "koa-send": "^5.0.0",
+    "ws": "^8.18.0"
+  }
+}

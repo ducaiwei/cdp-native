@@ -30,7 +30,14 @@ async function checkout(url, revision, dir, sparse) {
   git(['checkout', '--progress', '--detach', 'FETCH_HEAD']);
 }
 async function main({ output = path.join(root, 'public/webkit') } = {}) {
-  try { await fs.access(output); throw new Error('public/webkit 已存在；请移走后再准备，避免覆盖现有资源。'); }
+  await require('./setup-ios-proxy')();
+  try {
+    await fs.access(path.join(output, 'Main.html'));
+    console.log(`WebKit 前端已存在：${output}`);
+    return;
+  }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  try { await fs.access(output); throw new Error('public/webkit 已存在但不完整；请移走后再准备，避免覆盖现有资源。'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   const work = await fs.mkdtemp(path.join(os.tmpdir(), 'cdp-webkit-'));
   console.log(`准备 WebKit 前端，临时目录：${work}`);

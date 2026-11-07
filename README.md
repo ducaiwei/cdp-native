@@ -272,3 +272,5 @@ WebKit Inspector 与 CDP 都采用命令、响应和事件式交互，但方法�
 测试、构建和分发打包属于源码维护流程，具体脚本见 `package.json` 的 `scripts` 配置。自动化检查不能代替三端真机验证：至少检查页面发现、Inspect、断点、单步、变量查看、设备重连和应用重启。
 
 WebKit 前端包含来自 GPL-3.0 项目的兼容补丁，WebKit 源文件保留各自许可；准备和分发时应保留生成目录中的许可及 PROVENANCE.txt。ADB、HDC 和 iOS 代理也各有自身分发与运行依赖，详细安装说明见仓库 README。
+
+在 macOS ARM64 上，`npm run setup:webkit`（或 `cdp-native setup:webkit`）会优先复用已安装的 iOS 代理；缺失时通过 Homebrew 安装 `ios-webkit-debug-proxy` 及其依赖。请先安装 Homebrew。已有 WebKit 前端时会跳过前端下载，仍会检查代理。

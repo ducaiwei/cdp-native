@@ -1,8 +1,10 @@
-# cdp-native 功能、使用与三端协议实现原理
+# cdp-native
 
-本文基于仓库当前 0.1.0 版本源码，面向工具使用者和维护者。说明的是项目实际实现，不代表所有系统版本或设备均已完成真机验证。
+中文 | [English](README.en.md)
 
-## 1. 工具定位与功能
+基于当前 0.1.0 版本实现，介绍工具用途、使用方式与工作原理。具体面板兼容性需在目标设备上验证。
+
+## 1. 工具介绍
 
 cdp-native 是本地网页调试服务：把手机中的可调试网页列在统一入口，再打开适配该网页引擎的调试前端。服务由 Node.js 运行，浏览器提供操作界面，手机负责执行被调试页面。
 
@@ -24,9 +26,19 @@ cdp-native 是本地网页调试服务：把手机中的可调试网页列在统
 
 能力边界：这里的 Native 指直接连接设备提供的调试接口，并不意味着可以调试 Java、Kotlin、Swift、Objective-C 或 ArkTS 原生业务代码。工具不会替第三方应用开启 WebView 调试权限，也不注入脚本来绕过权限。面板是否可用取决于前端版本、目标引擎协议和应用配置。
 
-## 2. 安装与使用
+## 2. 为什么要用这个工具
 
-### 2.1 环境与通用流程
+- **统一三端调试入口**：在同一个本地页面发现 Android WebView、鸿蒙 ArkWeb 和 iOS WebKit 页面，并打开对应的调试前端。
+- **减少连接准备工作**：自动检测连接工具、发现调试 socket 并维护端口转发，减少手动查找进程与配置转发的步骤。
+- **便于多进程排查**：聚合所选设备中多个进程的页面，也可按设备和应用进程筛选目标。
+- **直接检查手机上的页面**：通过目标引擎提供的协议设置 JavaScript 断点、查看变量及检查页面，适合排查移动端 WebView 问题。
+- **适配已有环境**：支持指定本地工具、外部 iOS 代理或已有 CDP 端点，可复用现有调试配置。
+
+适用于已开启网页调试能力的应用开发与测试；原生代码调试仍需使用对应平台的开发工具。
+
+## 3. 如何使用
+
+### 3.1 环境与通用流程
 
 需要 Node.js 20 或更新版本。源码运行：
 
@@ -36,7 +48,7 @@ npm link
 cdp-native
 ```
 
-已有打包文件时：
+若对应版本已发布到 npm，可全局安装：
 
 ```sh
 npm install -g cdp-native@0.1.0
@@ -47,7 +59,7 @@ cdp-native
 
 CLI 只监听 `127.0.0.1`。可用 `CHII_CDP_TOKEN` 设置至少 16 字符的固定令牌；未设置时每次启动生成随机令牌。
 
-### 2.2 Android
+### 3.2 Android
 
 手机需要开启 USB 调试并授权电脑；应用需要启用 WebView 调试，例如：
 
@@ -55,7 +67,7 @@ CLI 只监听 `127.0.0.1`。可用 `CHII_CDP_TOKEN` 设置至少 16 字符的固
 WebView.setWebContentsDebuggingEnabled(true);
 ```
 
-**注意事项：** 请先打开 Android App 中的 WebView 页面，然后在 Native 提供的原生 WebView 中访问 `https://www.baidu.com`，保持该页面打开，再通过调试列表选择对应页面进行调试。
+请先打开应用中需要调试的 WebView 页面并保持打开，再从调试列表选择对应页面。
 
 ```sh
 cdp-native --device-type adb
@@ -65,7 +77,7 @@ cdp-native --adb-path /path/to/adb --no-download --no-open
 
 ADB 优先复用指定路径、SDK、PATH 或缓存中的工具。缺失时从 Google 下载 Platform-Tools；默认缓存为 `~/.cache/cdp-native/<系统>-<架构>`，可通过 `CHII_ADB_CACHE` 修改。自动下载覆盖 macOS x86-64/arm64、Windows x64、Linux x64；其他架构需自行提供工具。
 
-### 2.3 鸿蒙 / HDC
+### 3.3 鸿蒙 / HDC
 
 设备需要开启并授权 USB 调试，应用需要允许 ArkWeb 调试：
 
@@ -83,7 +95,7 @@ HDC 会从显式配置、SDK/DevEco 常见目录、PATH 和缓存中检测。内
 
 默认 `auto` 在 ADB/HDC 候选设备中选择唯一设备；候选不唯一时要求指定类型及序列号。选定后保持同一设备及传输方式，断开不会自动切到另一台手机。
 
-### 2.4 iOS
+### 3.4 iOS
 
 使用 `cdp-native --device-type ios` 启动时，会先检测 WebKit 前端：已安装则直接启动，缺失则自动下载准备后继续启动。指定外部 iOS 代理时同样执行检查；`--no-download` 会禁止自动下载。通常无需单独执行安装命令：
 
@@ -138,7 +150,7 @@ if #available(iOS 16.4, *) {
 
 在列表点击 **Inspect · WebKit**。默认展示代理发现的所有 iOS 设备页面，使用 `--ios-serial UDID` 可筛选。WebKit 前端与系统协议可能存在版本差异，需要在目标真机验证所需面板；准备前端时可通过 `CHII_IOS_PROTOCOL_VERSION` 选择源码提供的协议版本。
 
-### 2.5 常用参数
+### 3.5 常用参数
 
 | 参数 | 作用 |
 | --- | --- |
@@ -156,9 +168,35 @@ if #available(iOS 16.4, *) {
 
 ADB/HDC 的路径、序列号和进程名分别支持 `CHII_ADB_PATH/SERIAL/PACKAGE`、`CHII_HDC_PATH/SERIAL/PACKAGE` 环境变量。iOS 支持 `CHII_IOS_PROXY`、`CHII_IOS_SERIAL`、`CHII_WEBKIT_FRONTEND`；已有 CDP 地址支持 `CHII_CDP_URL`。
 
-## 3. 三端协议与通信链路
+### 3.6 macOS iOS 代理准备
 
-### 3.1 区分传输通道与调试协议
+在 macOS ARM64 上，`npm run setup:webkit`（或 `cdp-native setup:webkit`）会优先复用已安装的 iOS 代理；缺失时通过 Homebrew 安装 `ios-webkit-debug-proxy` 及其依赖。请先安装 Homebrew。已有 WebKit 前端时会跳过前端下载，仍会检查代理。
+
+使用 `npm start -- --device-type ios` 启动时，会检测 iOS 代理是否可运行，兼容 Intel Mac x86-64 和 Apple Silicon（arm64）。检测 PATH 后优先检查当前架构对应的 Homebrew 目录，并兼容另一安装目录；缺少代理时，arm64 自动复用 `setup:webkit` 的 Homebrew 代理安装流程（需要已安装 Homebrew）；使用 `--no-download` 时仅提示安装。Intel Mac 提示运行 `brew install ios-webkit-debug-proxy`。
+
+### 3.7 常见问题与验证
+
+| 现象 | 排查方向 |
+| --- | --- |
+| 一直等待设备 | 检查 USB、解锁、授权；确认 adb devices 或 hdc list targets 可见 |
+| 已连接但等待 WebView/ArkWeb | 打开目标网页，确认应用启用调试；核对进程名筛选 |
+| 提示多台设备 | 指定 device-type 和对应 serial |
+| iOS 代理无法连接 | 检查代理进程与设备列表端口；此错误本身不能证明手机未授权 |
+| iOS 缺少前端 | iOS 启动时会自动安装；若使用了 `--no-download`，请先手动运行 `cdp-native setup:webkit` 或指定已安装的前端目录 |
+| WebKit 自动安装失败 | 检查 Git、GitHub 网络/代理及目标目录写入权限，解决后重新启动 iOS 模式 |
+| iOS 页面有列表但面板异常 | 核查 WebKit 前端与系统协议版本，做真机验证 |
+| 重启应用后旧 Inspect 断开 | 等待列表更新，重新打开新页面 |
+| 工具下载失败 | 检查网络，或指定本地工具路径并使用 no-download |
+
+测试、构建和分发打包属于源码维护流程，具体脚本见 `package.json` 的 `scripts` 配置。自动化检查不能代替三端真机验证：至少检查页面发现、Inspect、断点、单步、变量查看、设备重连和应用重启。
+
+WebKit 前端包含来自 GPL-3.0 项目的兼容补丁，WebKit 源文件保留各自许可；准备和分发时应保留生成目录中的许可及 PROVENANCE.txt。ADB、HDC 和 iOS 代理也各有自身分发与运行依赖，请遵循对应组件的许可和安装要求。
+
+## 4. 工作原理
+
+### 4.1 三端协议与通信链路
+
+#### 4.1.1 区分传输通道与调试协议
 
 ADB、HDC 负责设备管理、shell 命令和端口转发，不是页面调试协议。CDP 和 WebKit Inspector 才表达“设置断点”“执行表达式”“接收暂停事件”等调试语义。WebSocket 是本服务与调试端点之间承载这些消息的连接方式。
 
@@ -176,7 +214,7 @@ flowchart LR
   Server --> Bridge
 ```
 
-### 3.2 Android：ADB 通道与 CDP
+#### 4.1.2 Android：ADB 通道与 CDP
 
 1. 执行 `adb start-server`、`adb devices`，筛选状态为 `device` 的设备。
 2. 执行 `adb -s SERIAL shell cat /proc/net/unix`，寻找 `webview_devtools_remote*` 抽象 Unix socket。
@@ -194,7 +232,7 @@ CDP 消息通常含 `id`、`method`、`params`，响应用相同 `id` 关联请�
 
 前端收到暂停事件后展示调用栈、作用域和变量；用户单步或继续时发送相应调试命令。实际调试动作由手机引擎完成，Node.js 不执行被调试代码。
 
-### 3.3 鸿蒙：HDC 通道与 CDP
+#### 4.1.3 鸿蒙：HDC 通道与 CDP
 
 流程与 Android 类似，设备命令改为 HDC：
 
@@ -209,7 +247,7 @@ hdc -t SERIAL fport tcp:PORT localabstract:webview_devtools_remote_PID
 
 HDC 常规命令使用 `-p` 避免重复启动探测；连接服务失败时尝试启动服务，设备查询发生特定超时时尝试 `start -r` 后重试。
 
-### 3.4 iOS：代理桥接与 WebKit Inspector
+#### 4.1.4 iOS：代理桥接与 WebKit Inspector
 
 1. 请求代理设备列表端口的 `/json`，默认地址为 `http://127.0.0.1:9221`。
 2. 根据 `deviceId` 筛选设备，从列表中取出每台设备的代理端口。
@@ -219,9 +257,9 @@ HDC 常规命令使用 `-p` 避免重复启动探测；连接服务失败时尝�
 
 WebKit Inspector 与 CDP 都采用命令、响应和事件式交互，但方法、参数和版本演进不能视为完全兼容。本项目不做协议转换，因此 iOS 使用独立 WebKit 前端。iOS 设备侧通信细节由代理及其依赖实现，不属于本仓库的实现范围。
 
-## 4. 服务实现原理
+### 4.2 服务实现原理
 
-### 4.1 模块职责
+#### 4.2.1 模块职责
 
 | 文件 | 职责 |
 | --- | --- |
@@ -237,13 +275,13 @@ WebKit Inspector 与 CDP 都采用命令、响应和事件式交互，但方法�
 | `server/lib/startIosProxy.js` | iOS 代理进程生命周期 |
 | `scripts/setup-webkit.js` | 准备 WebKit 前端与浏览器兼容补丁 |
 
-### 4.2 从登录到调试
+#### 4.2.2 从登录到调试
 
 默认路由包括 `/cdp/`、`POST /cdp/login`、`GET /cdp/targets` 和 `/cdp/socket?id=...`。用户提交令牌后，服务用基于令牌和路径生成的 HMAC 会话值设置 HttpOnly、SameSite=Strict Cookie。目标查询与 WebSocket 握手均校验会话；登录和握手还会检查请求携带的 Origin 与 Host 是否匹配。
 
 浏览器只提交目标 ID，不能直接指定任意上游 URL。握手时服务重新发现目标、查找 ID，再使用受控端点的主机和端口拼接目标声明的 WebSocket 路径与查询串。iOS 注册信息同样只能提供设备端口，不能替换配置的代理主机。
 
-### 4.3 多进程、失败与恢复
+#### 4.2.3 多进程、失败与恢复
 
 不同进程可能返回相同页面 ID，因此 CDP 目标使用“进程 socket 名 + 页面 ID”生成复合 ID；iOS 使用“ios + UDID + 页面 ID”。多个端点通过 `Promise.allSettled` 聚合，一部分失败时仍返回其他成功页面；所有端点失败才整体报错。这也意味着列表中缺少部分页面不一定会显示整体错误。
 
@@ -251,28 +289,6 @@ WebKit Inspector 与 CDP 都采用命令、响应和事件式交互，但方法�
 
 恢复转发不等于恢复原调试会话：应用重启导致旧页面消失后，通常需要重新选择新页面并打开 Inspect。
 
-### 4.4 消息透传与资源限制
+#### 4.2.4 消息透传与资源限制
 
 桥接器不解析或改写调试消息，保留文本/二进制标识、请求 ID、会话 ID 和事件。任一连接关闭或异常时关闭另一端。上游握手与 HTTP 发现超时为 5 秒；WebSocket 最大消息载荷为 32 MiB，发送积压超过 8 MiB 时关闭慢连接。这些措施限制挂起和积压，不构成协议兼容性保证。
-
-## 5. 常见问题与验证
-
-| 现象 | 排查方向 |
-| --- | --- |
-| 一直等待设备 | 检查 USB、解锁、授权；确认 adb devices 或 hdc list targets 可见 |
-| 已连接但等待 WebView/ArkWeb | 打开目标网页，确认应用启用调试；核对进程名筛选 |
-| 提示多台设备 | 指定 device-type 和对应 serial |
-| iOS 代理无法连接 | 检查代理进程与设备列表端口；此错误本身不能证明手机未授权 |
-| iOS 缺少前端 | iOS 启动时会自动安装；若使用了 `--no-download`，请先手动运行 `cdp-native setup:webkit` 或指定已安装的前端目录 |
-| WebKit 自动安装失败 | 检查 Git、GitHub 网络/代理及目标目录写入权限，解决后重新启动 iOS 模式 |
-| iOS 页面有列表但面板异常 | 核查 WebKit 前端与系统协议版本，做真机验证 |
-| 重启应用后旧 Inspect 断开 | 等待列表更新，重新打开新页面 |
-| 工具下载失败 | 检查网络，或指定本地工具路径并使用 no-download |
-
-测试、构建和分发打包属于源码维护流程，具体脚本见 `package.json` 的 `scripts` 配置。自动化检查不能代替三端真机验证：至少检查页面发现、Inspect、断点、单步、变量查看、设备重连和应用重启。
-
-WebKit 前端包含来自 GPL-3.0 项目的兼容补丁，WebKit 源文件保留各自许可；准备和分发时应保留生成目录中的许可及 PROVENANCE.txt。ADB、HDC 和 iOS 代理也各有自身分发与运行依赖，详细安装说明见仓库 README。
-
-在 macOS ARM64 上，`npm run setup:webkit`（或 `cdp-native setup:webkit`）会优先复用已安装的 iOS 代理；缺失时通过 Homebrew 安装 `ios-webkit-debug-proxy` 及其依赖。请先安装 Homebrew。已有 WebKit 前端时会跳过前端下载，仍会检查代理。
-
-使用 `npm start -- --device-type ios` 启动时，会检测 iOS 代理是否可运行，兼容 Intel Mac x86-64 和 Apple Silicon（arm64）。检测 PATH 后优先检查当前架构对应的 Homebrew 目录，并兼容另一安装目录；缺少代理时，arm64 自动复用 `setup:webkit` 的 Homebrew 代理安装流程（需要已安装 Homebrew）；使用 `--no-download` 时仅提示安装。Intel Mac 提示运行 `brew install ios-webkit-debug-proxy`。
